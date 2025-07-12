@@ -1,0 +1,42 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  phone     String?
+  password  String?
+  
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamento Many-to-One com Plan (muitos usuários podem ter o mesmo plano)
+  planId String?
+  plan   Plan?   @relation(fields: [planId], references: [id])
+  
+  @@map("users")
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relacionamento One-to-Many com User (um plano pode ter múltiplos usuários)
+  users User[]
+  
+  @@map("plans")
+}
