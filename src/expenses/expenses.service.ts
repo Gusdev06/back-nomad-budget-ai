@@ -21,8 +21,17 @@ export class ExpensesService {
       where: { phone },
     });
 
+   
+
     if (!user || !user.defaultCurrency || !user.countryCurrency) {
       throw new NotFoundException('User, user default currency, or country currency not found.');
+    }
+
+    if(user.active === false) {
+      return {
+        message: 'User is not active.',
+        status: 400,
+      }
     }
     
     // If no currency is provided, default to the user's country currency
