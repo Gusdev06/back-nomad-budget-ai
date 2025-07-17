@@ -26,9 +26,24 @@ export class ExpensesService {
     return parseFloat(numericAmount.toFixed(2));
   }
 
+  private formatPhoneNumber(phone: string): string {
+    // Remove "+" symbol and any spaces
+    const cleanPhone = phone.replace(/^\+/, '').replace(/\s+/g, '');
+    
+    // Validate if it contains only numbers
+    if (!/^\d+$/.test(cleanPhone)) {
+      throw new BadRequestException('Phone number must contain only digits');
+    }
+    
+    return cleanPhone;
+  }
+
   async create(createExpenseDto: CreateExpenseDto) {
-    const { phone, description, categoryId, expenseDate } = createExpenseDto;
+    const { description, categoryId, expenseDate } = createExpenseDto;
     let currency = createExpenseDto.currency;
+    
+    // Format phone number to remove "+" and ensure clean format
+    const phone = this.formatPhoneNumber(createExpenseDto.phone);
     
     // Format amount to ensure it's a valid number
     const amount = this.formatAmount(createExpenseDto.amount);
