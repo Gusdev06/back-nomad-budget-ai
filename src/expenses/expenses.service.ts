@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
@@ -13,15 +13,29 @@ export class ExpensesService {
     private readonly httpService: HttpService,
   ) {}
 
+  private formatAmount(amount: number | string): number {
+    // Convert string to number if needed
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
+    // Validate if it's a valid number
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new BadRequestException('Amount must be a valid positive number');
+    }
+    
+    // Format to 2 decimal places and convert back to number
+    return parseFloat(numericAmount.toFixed(2));
+  }
+
   async create(createExpenseDto: CreateExpenseDto) {
-    const { phone, description, amount, categoryId, expenseDate } = createExpenseDto;
-    let currency = createExpenseDto.currency; // Get currency from DTO
+    const { phone, description, categoryId, expenseDate } = createExpenseDto;
+    let currency = createExpenseDto.currency;
+    
+    // Format amount to ensure it's a valid number
+    const amount = this.formatAmount(createExpenseDto.amount);
 
     const user = await this.prisma.user.findFirst({
       where: { phone },
     });
-
-   
 
     if (!user || !user.defaultCurrency || !user.countryCurrency) {
       throw new NotFoundException('User, user default currency, or country currency not found.');
@@ -53,7 +67,7 @@ export class ExpensesService {
         if (fxData && fxData.bid) {
           const rate = parseFloat(fxData.bid);
           if (rate > 0) {
-            amountBase = amount / rate; // Divide when using direct rate
+            amountBase = parseFloat((amount / rate).toFixed(2)); // Format converted amount
             conversionSuccess = true;
           }
         }
@@ -69,7 +83,7 @@ export class ExpensesService {
           const fxData = response.data[`${currency}${defaultCurrency}`];
           if (fxData && fxData.bid) {
             const rate = parseFloat(fxData.bid);
-            amountBase = amount * rate; // Multiply when using inverse rate
+            amountBase = parseFloat((amount * rate).toFixed(2)); // Format converted amount
             conversionSuccess = true;
           }
         } catch (error) {
