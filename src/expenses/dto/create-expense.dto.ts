@@ -10,7 +10,6 @@ export class CreateExpenseDto {
   description: string;
 
   @IsNotEmpty()
-  @IsNumber()
   amount: number;
 
   @IsOptional()
