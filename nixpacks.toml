@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20", "yarn"]
 cmds = ["yarn install --frozen-lockfile"]
 
 [phases.build]
-cmds = ["yarn run build"]
+cmds = ["npx prisma generate", "yarn run build"]
 
 [start]
 cmd = "yarn run start:prod" 
