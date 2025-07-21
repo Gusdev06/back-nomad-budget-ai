@@ -5,7 +5,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { getCurrentDate } from '../utils/date';
 import { GetTransactionsSummaryDto } from './dto/get-transactions-summary.dto';
-import { ExpenseType } from '@prisma/client';
+import { TransactionType } from '@prisma/client';
 
 @Injectable()
 export class TransactionsService {
@@ -125,7 +125,7 @@ export class TransactionsService {
         amountBase: amountBase,
         currencyBase: defaultCurrency,
         categoryId: categoryId,
-        type: type as ExpenseType,
+        type: type as TransactionType,
         expenseDate: expenseDate,
       },
     });
