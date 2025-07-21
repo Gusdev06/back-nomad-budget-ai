@@ -3,6 +3,8 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { getCurrentDate } from '../utils/date';
+import { GetExpensesSummaryDto } from './dto/get-expenses-summary.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -39,8 +41,9 @@ export class ExpensesService {
   }
 
   async create(createExpenseDto: CreateExpenseDto) {
-    const { description, categoryId, expenseDate } = createExpenseDto;
+    const { description, categoryId } = createExpenseDto;
     let currency = createExpenseDto.currency;
+    const expenseDate = new Date(getCurrentDate(createExpenseDto.expenseDate));
     
     // Format phone number to remove "+" and ensure clean format
     const phone = this.formatPhoneNumber(createExpenseDto.phone);
@@ -124,5 +127,80 @@ export class ExpensesService {
         expenseDate: expenseDate,
       },
     });
+  }
+
+  async getSummary(getExpensesSummaryDto: GetExpensesSummaryDto) {
+    const { phone, startDate, endDate, categoryId, currency } = getExpensesSummaryDto;
+
+    const formattedPhone = this.formatPhoneNumber(phone);
+    const user = await this.prisma.user.findFirst({
+      where: { phone: formattedPhone },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const where: any = {
+      userId: user.id,
+    };
+
+    if (startDate) {
+      where.expenseDate = { ...where.expenseDate, gte: new Date(getCurrentDate(startDate)) };
+    }
+
+    if (endDate) {
+      where.expenseDate = { ...where.expenseDate, lte: new Date(getCurrentDate(endDate)) };
+    }
+
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
+
+    if (currency) {
+      where.currencyLocal = currency;
+    }
+
+    const totalAmountBaseResult = await this.prisma.expense.aggregate({
+        where,
+        _sum: {
+            amountBase: true,
+        },
+    });
+    
+    const totalAmountBase = totalAmountBaseResult._sum.amountBase || 0;
+
+    if (currency) {
+        const totalAmountLocalResult = await this.prisma.expense.aggregate({
+            where,
+            _sum: {
+                amountLocal: true
+            }
+        });
+        const totalAmountLocal = totalAmountLocalResult._sum.amountLocal || 0;
+        return {
+            totalAmountLocal,
+            currencyLocal: currency,
+            totalAmountBase,
+            currencyBase: user.defaultCurrency
+        }
+    } 
+
+    const summaryByCurrency = await this.prisma.expense.groupBy({
+        by: ['currencyLocal'],
+        where,
+        _sum: {
+            amountLocal: true,
+        },
+    });
+
+    return {
+        summaryLocal: summaryByCurrency.map(item => ({
+            totalAmountLocal: item._sum.amountLocal || 0,
+            currencyLocal: item.currencyLocal,
+        })),
+        totalAmountBase,
+        currencyBase: user.defaultCurrency,
+    };
   }
 }
