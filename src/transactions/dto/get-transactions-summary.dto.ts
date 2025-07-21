@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsOptional, IsString, IsUUID, IsDateString } from 'class-validator';
 
-export class GetExpensesSummaryDto {
+export class GetTransactionsSummaryDto {
   @IsNotEmpty()
   @IsString()
   phone: string;

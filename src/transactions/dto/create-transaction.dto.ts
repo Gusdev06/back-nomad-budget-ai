@@ -1,6 +1,6 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
-export class CreateExpenseDto {
+export class CreateTransactionDto {
   @IsNotEmpty()
   @IsString()
   phone: string;
@@ -11,6 +11,10 @@ export class CreateExpenseDto {
 
   @IsNotEmpty()
   amount: number;
+
+  @IsNotEmpty()
+  @IsIn(['INCOME', 'EXPENSE'])
+  type: string;
 
   @IsOptional()
   @IsString()

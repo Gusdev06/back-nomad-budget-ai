@@ -17,7 +17,7 @@ export class CategoriesService {
     return this.prisma.category.findUnique({
       where: { id },
       include: {
-        expenses: true,
+        transactions: true,
       },
     });
   }

@@ -20,7 +20,7 @@ model User {
   active          Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  expenses        Expense[]
+  transactions    Transaction[]
   plan            Plan      @relation(fields: [planId], references: [id])
 
   // Campos para integração com o Stripe
@@ -30,7 +30,12 @@ model User {
   stripeCurrentPeriodEnd   DateTime? @map("stripe_current_period_end")
 }
 
-model Expense {
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Transaction {
   id            String    @id @default(uuid())
   userId        String
   description   String
@@ -39,6 +44,7 @@ model Expense {
   amountBase    Decimal   @db.Decimal(14, 2)
   currencyBase  String
   categoryId    String?
+  type          TransactionType?
   expenseDate   DateTime  @default(now())
   createdAt     DateTime  @default(now())
   category      Category? @relation(fields: [categoryId], references: [id])
@@ -70,7 +76,7 @@ model Category {
   id       String    @id @default(uuid())
   name     String    @unique
   emoji    String?
-  expenses Expense[]
+  transactions Transaction[]
 }
 
 model FxRate {

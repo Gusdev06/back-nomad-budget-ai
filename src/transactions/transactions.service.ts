@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { CreateExpenseDto } from './dto/create-expense.dto';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { getCurrentDate } from '../utils/date';
-import { GetExpensesSummaryDto } from './dto/get-expenses-summary.dto';
+import { GetTransactionsSummaryDto } from './dto/get-transactions-summary.dto';
+import { ExpenseType } from '@prisma/client';
 
 @Injectable()
-export class ExpensesService {
+export class TransactionsService {
   private readonly fxApiBaseUrl = 'https://economia.awesomeapi.com.br/json/last/';
 
   constructor(
@@ -40,16 +41,16 @@ export class ExpensesService {
     return cleanPhone;
   }
 
-  async create(createExpenseDto: CreateExpenseDto) {
-    const { description, categoryId } = createExpenseDto;
-    let currency = createExpenseDto.currency;
-    const expenseDate = new Date(getCurrentDate(createExpenseDto.expenseDate));
+  async create(createTransactionDto: CreateTransactionDto) {
+    const { description, categoryId, type } = createTransactionDto;
+    let currency = createTransactionDto.currency;
+    const expenseDate = new Date(getCurrentDate(createTransactionDto.expenseDate));
     
     // Format phone number to remove "+" and ensure clean format
-    const phone = this.formatPhoneNumber(createExpenseDto.phone);
+    const phone = this.formatPhoneNumber(createTransactionDto.phone);
     
     // Format amount to ensure it's a valid number
-    const amount = this.formatAmount(createExpenseDto.amount);
+    const amount = this.formatAmount(createTransactionDto.amount);
 
     const user = await this.prisma.user.findFirst({
       where: { phone },
@@ -115,7 +116,7 @@ export class ExpensesService {
       }
     }
 
-    return this.prisma.expense.create({
+    return this.prisma.transaction.create({
       data: {
         userId: user.id,
         description: description,
@@ -124,13 +125,14 @@ export class ExpensesService {
         amountBase: amountBase,
         currencyBase: defaultCurrency,
         categoryId: categoryId,
+        type: type as ExpenseType,
         expenseDate: expenseDate,
       },
     });
   }
 
-  async getSummary(getExpensesSummaryDto: GetExpensesSummaryDto) {
-    const { phone, startDate, endDate, categoryId, currency } = getExpensesSummaryDto;
+  async getSummary(getTransactionsSummaryDto: GetTransactionsSummaryDto) {
+    const { phone, startDate, endDate, categoryId, currency } = getTransactionsSummaryDto;
 
     const formattedPhone = this.formatPhoneNumber(phone);
     const user = await this.prisma.user.findFirst({
@@ -161,7 +163,7 @@ export class ExpensesService {
       where.currencyLocal = currency;
     }
 
-    const totalAmountBaseResult = await this.prisma.expense.aggregate({
+    const totalAmountBaseResult = await this.prisma.transaction.aggregate({
         where,
         _sum: {
             amountBase: true,
@@ -171,7 +173,7 @@ export class ExpensesService {
     const totalAmountBase = totalAmountBaseResult._sum.amountBase || 0;
 
     if (currency) {
-        const totalAmountLocalResult = await this.prisma.expense.aggregate({
+        const totalAmountLocalResult = await this.prisma.transaction.aggregate({
             where,
             _sum: {
                 amountLocal: true
@@ -186,7 +188,7 @@ export class ExpensesService {
         }
     } 
 
-    const summaryByCurrency = await this.prisma.expense.groupBy({
+    const summaryByCurrency = await this.prisma.transaction.groupBy({
         by: ['currencyLocal'],
         where,
         _sum: {
